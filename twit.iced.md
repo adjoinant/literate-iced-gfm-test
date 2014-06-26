@@ -13,7 +13,7 @@ suppose that we have a (fake) oracle to which we can send out questions across t
 Then we can write a simple wrapper around that oracle to make it easy to get the answer to 
 something. This is not doing anything fancy at this point.
     
-```coffee-script
+```iced-coffee-script
 
     search = (keyword,cb) ->
       twit = oracle
