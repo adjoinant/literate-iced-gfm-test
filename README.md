@@ -1,0 +1,1 @@
+Just a small test of displaying literate coffeescript files with GFM.
