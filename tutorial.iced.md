@@ -1,6 +1,7 @@
 # Quick Tutorial and Examples
 
 Here is a simple example that print "hello" 10 times, with 100ms delay slots in between:
+
 ```coffee
 
     # A basic serial loop    
@@ -22,6 +23,7 @@ the coffee compiler).
 This next example does the same, while showcasing power of the `await..` language addition. In the 
 example below, the two timers are fired in parallel, and only when both have fulfilled their 
 deferrals (after 100ms), does progress continue...
+
 ```coffee
 
     for i in [0..10]
@@ -33,6 +35,7 @@ deferrals (after 100ms), does progress continue...
 
 Now for something more useful. Here is a parallel DNS resolver that will exit as soon as the last
 of your resolutions completes:
+
 ```coffee
 
     dns = require 'dns'
@@ -51,12 +54,16 @@ of your resolutions completes:
 ```
 
 You can run this on the command line like so:
+
 ```coffee
+
 iced -l tutorial.iced.md yahoo.com google.com nytimes.com tinyurl.com
 ```
 
 And you will get a response:
+
 ```sh
+
 yahoo.com -> 206.190.36.45,98.139.183.24,98.138.253.109
 google.com -> 173.194.112.14,173.194.112.3,173.194.112.8,173.194.112.7,173.194.112.1,173.194.112.0,
 173.194.112.4,173.194.112.5,173.194.112.6,173.194.112.2,173.194.112.9
@@ -64,12 +71,51 @@ google.com -> 173.194.112.14,173.194.112.3,173.194.112.8,173.194.112.7,173.194.1
 
 If you want to run these DNS resolutions in serial (rather than in parallel), then the change 
 from the above is trivial: just switch the order of the `await` and `for` statements above:
+
 ```coffee
+
 do_all (hs) ->
   for h in hs
     await 
       do_one defer(), h
 ```
+
+## Slightly More Advanced Example
+
+We've shown parallel and serial work flows, what about something in between? For instance, 
+we might want to make progress in parallel on our DNS lookups, but not smash the server all 
+at once. A compromise is windowing, which can be achieved in IcedCoffeeScript conveniently in a 
+number of different ways. The 2007 academic paper on tame suggests a technique called a *rendezvous*. 
+A rendezvous is implemented in CoffeeScript as a pure CS construct (no rewriting involved), which 
+allows a program to continue as soon as the first deferral is fulfilled (rather than the last):
+
+```coffee
+
+do_all = (lst, windowsz) ->
+  rv = new iced.Rendezvous
+  nsent = 0
+  nrecv = 0
+
+  while nrecv < lst.length
+    if nsent - nrecv < windowsz and  nsent < n
+      do_one rv.id(nsent).defer(), lst[nsent]
+      nsent++
+    else
+      await rv.wait defer evid
+      console.log "got back lookup nsent=#{evid}"
+      nrecv++
+```
+
+This code maintains two counters: the number of requests sent, and the number received. It keeps 
+looping until the last lookup is received. Inside the loop, if there is room in the window and
+there are more to send, then send; otherwise, wait and harvest. `Rendezvous.defer` makes a deferral 
+much like the `defer` primitive, but it can be labeled with an identifier. This way, the waiter can 
+know which deferral has fulfilled. In this case we use the variable `nsent` as the defer ID --- 
+it's the ID of this deferral in launch order. When we harvest the deferral, `rv.wait` fires its 
+callback with the ID of the deferral that's harvested.
+
+Note that with windowing, the arrival order might not be the same as the issue order. In this 
+example, a slower DNS lookup might arrive after faster ones, even if issued before them.
 
 ## Composing Serial and Parallel Patterns
 
@@ -77,6 +123,7 @@ In ICS, arbitrary composition of serial and parallel control flows is possible w
 functional decomposition. Therefore, we don't allow direct `await` nesting. With inline anonymous
 Coffeescript functions, you can concisely achieve interesting patterns. The code below launches
 10 parallel computations, each of which must complete two serial actions before finishing:
+
 ```coffee
     
     f = (n, cb) ->
@@ -89,11 +136,13 @@ Coffeescript functions, you can concisely achieve interesting patterns. The code
           )(defer())
       cb()
 ```
+
 ## autocb
 
 Most of the time, an iced function will call its callback and return at the same time. To get this
 behaviour "for free", you can simply name this callback `autocb` and it will fire whenever your iced
 function returns. For instance, the above example could be equivalently written as:
+
 ```coffee
   
     f = (n, autocb) ->
@@ -104,12 +153,14 @@ function returns. For instance, the above example could be equivalently written 
             setTimeout defer(), 4 * Math.random()
           )(defer())
 ```
+
 In the first example, recall, you call cb() explicitly. In this example, because the callback is
 named `autocb`, it's fired automatically when the iced function returns.
 
 If you callback needs to fulfill with a value, then you can pass that value via return. Consider
 the following function, that waits for a random number of seconds between 0 and 4. After waiting, 
 it then fulfills its callback `cb` with the amount of time it waited:
+
 ```coffee
 
     rand_wait = (cb) ->
@@ -120,7 +171,9 @@ it then fulfills its callback `cb` with the amount of time it waited:
       await setTimeout defer(), time
       cb(time)
 ```
+
 This function can be written equivalently with `autocb` as:
+
 ```coffee
 
     rand_wait = (autocb) ->
@@ -129,6 +182,7 @@ This function can be written equivalently with `autocb` as:
       await setTimeout defer(), time
       return time
 ```
+
 Implicitly, `return 0` is mapped by the Coffeescript compiler to `autocb(0); return`.
 
 
