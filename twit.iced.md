@@ -1,6 +1,6 @@
 
 suppose that we have a (fake) oracle to which we can send out questions across the web:
-```coffee-script
+
 
     oracle = (keyword, cb) ->
       leng = Math.random(5)
@@ -8,7 +8,7 @@ suppose that we have a (fake) oracle to which we can send out questions across t
         results: ["the answer to " + keyword + " is more beer."]
         oracle_name: "Hypatia"
       setTimeout func, leng*1000
-```
+
 Then we can write a simple wrapper around that oracle to make it easy to get the answer to
 something. This is not doing anything fancy at this point.
 ```coffee-script
